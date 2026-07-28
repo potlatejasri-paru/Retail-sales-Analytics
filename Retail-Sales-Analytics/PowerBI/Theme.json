@@ -1,0 +1,18 @@
+{
+  "name": "Retail Sales Analytics",
+  "dataColors": ["#1F4E79","#2E86AB","#F6A600","#C0392B","#27AE60","#8E44AD","#16A085","#D35400"],
+  "background": "#FFFFFF",
+  "foreground": "#1F2933",
+  "tableAccent": "#1F4E79",
+  "textClasses": {
+    "title":  { "fontFace": "Segoe UI Semibold", "fontSize": 14, "color": "#1F4E79" },
+    "label":  { "fontFace": "Segoe UI", "fontSize": 10, "color": "#52606D" },
+    "callout":{ "fontFace": "Segoe UI Bold", "fontSize": 28, "color": "#1F4E79" }
+  },
+  "visualStyles": {
+    "*": { "*": {
+      "background": [{ "show": true, "color": { "solid": { "color": "#FFFFFF" } } }],
+      "border": [{ "show": true, "color": { "solid": { "color": "#E4E7EB" } }, "radius": 8 }]
+    } }
+  }
+}

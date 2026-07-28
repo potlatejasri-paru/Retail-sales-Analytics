@@ -1,0 +1,103 @@
+/* ===========================================================
+   Retail Sales Analytics - Power BI DAX Measure Library
+   Model: Fact_Sales (retail_sales_cleaned.csv) + Dim_Date +
+          Dim_Customer + Dim_Product + Dim_Geography
+   =========================================================== */
+
+-- ---------- Core KPIs ----------
+Total Sales      = SUM ( Fact_Sales[Sales Amount] )
+Total Profit     = SUM ( Fact_Sales[Profit] )
+Total Orders     = DISTINCTCOUNT ( Fact_Sales[Order ID] )
+Total Customers  = DISTINCTCOUNT ( Fact_Sales[Customer ID] )
+Units Sold       = SUM ( Fact_Sales[Quantity] )
+Profit Margin %  = DIVIDE ( [Total Profit], [Total Sales] )
+Avg Order Value  = DIVIDE ( [Total Sales], [Total Orders] )
+Avg Discount %   = AVERAGE ( Fact_Sales[Discount] )
+
+-- ---------- Time intelligence ----------
+Sales LY =
+CALCULATE ( [Total Sales], SAMEPERIODLASTYEAR ( Dim_Date[Date] ) )
+
+Sales YoY % =
+DIVIDE ( [Total Sales] - [Sales LY], [Sales LY] )
+
+Sales PM =
+CALCULATE ( [Total Sales], DATEADD ( Dim_Date[Date], -1, MONTH ) )
+
+Sales MoM % =
+DIVIDE ( [Total Sales] - [Sales PM], [Sales PM] )
+
+Sales YTD =
+TOTALYTD ( [Total Sales], Dim_Date[Date] )
+
+Rolling 3M Sales =
+CALCULATE (
+    [Total Sales],
+    DATESINPERIOD ( Dim_Date[Date], MAX ( Dim_Date[Date] ), -3, MONTH )
+)
+
+-- ---------- Ranking / Top N ----------
+Product Rank = RANKX ( ALL ( Dim_Product[Product Name] ), [Total Sales],, DESC )
+Customer Rank = RANKX ( ALL ( Dim_Customer[Customer ID] ), [Total Sales],, DESC )
+
+Top 10 Product Sales =
+CALCULATE (
+    [Total Sales],
+    KEEPFILTERS ( TOPN ( 10, ALL ( Dim_Product[Product Name] ), [Total Sales], DESC ) )
+)
+
+-- ---------- Retention ----------
+Repeat Customers =
+COUNTROWS (
+    FILTER (
+        VALUES ( Fact_Sales[Customer ID] ),
+        CALCULATE ( DISTINCTCOUNT ( Fact_Sales[Order ID] ) ) > 1
+    )
+)
+
+Repeat Customer Rate % = DIVIDE ( [Repeat Customers], [Total Customers] )
+
+New Customers =
+VAR CurrentPeriod = MAX ( Dim_Date[Date] )
+RETURN
+COUNTROWS (
+    FILTER (
+        VALUES ( Fact_Sales[Customer ID] ),
+        CALCULATE ( MIN ( Fact_Sales[Order Date] ), ALL ( Dim_Date ) )
+            >= MIN ( Dim_Date[Date] )
+            && CALCULATE ( MIN ( Fact_Sales[Order Date] ), ALL ( Dim_Date ) ) <= CurrentPeriod
+    )
+)
+
+Customer Lifetime Value = DIVIDE ( [Total Sales], [Total Customers] )
+
+-- ---------- Conditional formatting helpers ----------
+Margin Colour =
+SWITCH ( TRUE (),
+    [Profit Margin %] >= 0.20, "#27AE60",
+    [Profit Margin %] >= 0.12, "#F6A600",
+    "#C0392B"
+)
+
+KPI Sales Title = "Total Sales  |  " & FORMAT ( [Total Sales], "$#,##0" )
+
+-- ---------- Calculated columns ----------
+Fact_Sales[Age Group] =
+SWITCH ( TRUE (),
+    RELATED ( Dim_Customer[Age] ) <= 25, "18-25",
+    RELATED ( Dim_Customer[Age] ) <= 35, "26-35",
+    RELATED ( Dim_Customer[Age] ) <= 45, "36-45",
+    RELATED ( Dim_Customer[Age] ) <= 55, "46-55",
+    "56-70"
+)
+
+Dim_Date =
+ADDCOLUMNS (
+    CALENDAR ( DATE ( 2023, 1, 1 ), DATE ( 2024, 12, 31 ) ),
+    "Year", YEAR ( [Date] ),
+    "Month No", MONTH ( [Date] ),
+    "Month", FORMAT ( [Date], "MMM" ),
+    "Year-Month", FORMAT ( [Date], "YYYY-MM" ),
+    "Quarter", "Q" & FORMAT ( [Date], "Q" ),
+    "Weekday", FORMAT ( [Date], "ddd" )
+)
